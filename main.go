@@ -213,7 +213,7 @@ func geocode(location string) (float64, float64) {
 	return lat, lng
 }
 
-func weather(lat, lng float64) (string, string) {
+func weather(lat, lng float64) (string, time.Time) {
 	apiKey := os.Getenv("DarkSkyKey")
 	url := fmt.Sprintf("https://api.darksky.net/forecast/%s/%f,%f", apiKey, lat, lng)
 	// fmt.Println(url)
@@ -239,13 +239,32 @@ func weather(lat, lng float64) (string, string) {
 	}
 
 	summary := record.Minutely.Summary
-	time := time.Unix(record.Minutely.Data[0].Time, 0).Format(time.RFC822Z)
+	actualTime := time.Unix(record.Minutely.Data[0].Time, 0)
 
-	return summary, time
+	for _, element := range record.Minutely.Data {
+		if element.PrecipProbability > 0.4 && record.Currently.PrecipProbability < 0.4 {
+			precipProb := element.PrecipProbability
+			precipInt := element.PrecipIntensity
+			precipType := element.PrecipType
+			precipTime := time.Unix(element.Time, 0)
+			if actualTime != precipTime {
+				fmt.Println(precipProb, precipInt, precipType, precipTime)
+				fmt.Println(subtractTime(precipTime, actualTime))
+				break
+			}
+		}
+	}
+
+	return summary, actualTime
+}
+
+func subtractTime(time1, time2 time.Time) float64 {
+	diff := time2.Sub(time1).Minutes()
+	return -diff
 }
 
 func main() {
-	lat, lng := geocode("london")
+	lat, lng := geocode("aylesbury")
 	summary, time := weather(lat, lng)
-	fmt.Println(summary, time)
+	fmt.Println(summary, time, lat, lng)
 }
