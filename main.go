@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"time"
 )
 
@@ -173,7 +174,7 @@ type DarkSky struct {
 }
 
 func geocode(location string) (float64, float64) {
-	apiKey := ""
+	apiKey := os.Getenv("MapsKey")
 	url := fmt.Sprintf("https://maps.googleapis.com/maps/api/geocode/json?address=%s&key=%s", location, apiKey)
 	// fmt.Println(url)
 
@@ -213,7 +214,7 @@ func geocode(location string) (float64, float64) {
 }
 
 func weather(lat, lng float64) (string, string) {
-	apiKey := ""
+	apiKey := os.Getenv("DarkSkyKey")
 	url := fmt.Sprintf("https://api.darksky.net/forecast/%s/%f,%f", apiKey, lat, lng)
 	// fmt.Println(url)
 
