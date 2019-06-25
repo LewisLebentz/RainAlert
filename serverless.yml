@@ -20,3 +20,4 @@ functions:
       - http:
           path: rainalert
           method: get
+      - schedule: rate(1 hour)
