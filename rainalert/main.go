@@ -10,12 +10,18 @@ import (
 	"time"
 	"reflect"
 	"os"
+	"bytes"
+	"errors"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 )
 
 type Response events.APIGatewayProxyResponse
+
+type SlackRequestBody struct {
+    Text string `json:"text"`
+}
 
 type GoogleMaps struct {
 	Results []struct {
@@ -273,8 +279,32 @@ func subtractTime(time1, time2 time.Time) float64 {
 	return -diff
 }
 
+func sendToSlack(msg string) error {
+	webhookUrl := os.Getenv("SlackUrl")
+  slackBody, _ := json.Marshal(SlackRequestBody{Text: msg})
+  req, err := http.NewRequest(http.MethodPost, webhookUrl, bytes.NewBuffer(slackBody))
+  if err != nil {
+      return err
+  }
+
+  req.Header.Add("Content-Type", "application/json")
+
+  client := &http.Client{Timeout: 10 * time.Second}
+  resp, err := client.Do(req)
+  if err != nil {
+      return err
+  }
+
+  buf := new(bytes.Buffer)
+  buf.ReadFrom(resp.Body)
+  if buf.String() != "ok" {
+      return errors.New("Non-ok response returned from Slack")
+  }
+  return nil
+}
+
 func Handler(ctx context.Context) (Response, error) {
-	lat, lng := geocode("rg248jz")
+	lat, lng := geocode("ec4m7rf")
 	summary := weather(lat, lng)
 	fmt.Println(lat, lng)
 	fmt.Println(summary)
@@ -290,7 +320,7 @@ func Handler(ctx context.Context) (Response, error) {
 			"X-MyCompany-Func-Reply": "rainalert-handler",
 		},
 	}
-
+	sendToSlack(summary)
 	return resp, nil
 }
 
