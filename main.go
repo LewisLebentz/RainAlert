@@ -1,14 +1,20 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"strings"
 	"time"
+	"reflect"
+
+	"github.com/aws/aws-lambda-go/events"
+	"github.com/aws/aws-lambda-go/lambda"
 )
+
+type Response events.APIGatewayProxyResponse
 
 type GoogleMaps struct {
 	Results []struct {
@@ -240,7 +246,8 @@ func weather(lat, lng float64) string {
 		log.Println(err)
 	}
 
-	// summary := record.Minutely.Summary
+	summary := record.Minutely.Summary
+	fmt.Println(summary)
 	actualTime := time.Unix(record.Minutely.Data[0].Time, 0)
 
 	for _, element := range record.Minutely.Data {
@@ -257,7 +264,7 @@ func weather(lat, lng float64) string {
 		}
 	}
 
-	return ""
+	return summary
 }
 
 func subtractTime(time1, time2 time.Time) float64 {
@@ -265,9 +272,27 @@ func subtractTime(time1, time2 time.Time) float64 {
 	return -diff
 }
 
-func main() {
-	lat, lng := geocode("cambridge")
+func Handler(ctx context.Context) (Response, error) {
+	lat, lng := geocode("rg248jz")
 	summary := weather(lat, lng)
 	fmt.Println(lat, lng)
 	fmt.Println(summary)
+	fmt.Println(reflect.TypeOf(summary))
+	message := fmt.Sprintf(" { \"Message\" : \"%s\" } ", summary)
+
+	resp := Response{
+		StatusCode:      200,
+		IsBase64Encoded: false,
+		Body:            message,
+		Headers: map[string]string{
+			"Content-Type":           "application/json",
+			"X-MyCompany-Func-Reply": "rainalert-handler",
+		},
+	}
+
+	return resp, nil
+}
+
+func main() {
+	lambda.Start(Handler)
 }
